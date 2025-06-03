@@ -2,66 +2,75 @@
  * ログインページのテスト
  */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { useRouter } from 'next/navigation'
 import LoginPage from './page'
-
-jest.mock('next/navigation', () => ({
-  useRouter: jest.fn(),
-}))
+import { createClient } from '@/utils/supabase/client'
 
 jest.mock('@/utils/supabase/client', () => ({
-  createClient: jest.fn(() => ({
-    auth: {
-      signInWithPassword: jest.fn(),
-      signUp: jest.fn(),
-    },
-  })),
+  createClient: jest.fn(),
 }))
 
 describe('LoginPage', () => {
-  const mockPush = jest.fn()
-  const mockRefresh = jest.fn()
-
+  const mockSignInWithOAuth = jest.fn()
+  
   beforeEach(() => {
-    ;(useRouter as jest.Mock).mockReturnValue({
-      push: mockPush,
-      refresh: mockRefresh,
+    jest.clearAllMocks()
+    ;(createClient as jest.Mock).mockReturnValue({
+      auth: {
+        signInWithOAuth: mockSignInWithOAuth,
+      },
     })
   })
 
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
-
-  test('ログインフォームが表示される', () => {
+  test('Twitchログインボタンが表示される', () => {
     render(<LoginPage />)
     
     expect(screen.getByText('WeighCast')).toBeInTheDocument()
-    expect(screen.getByLabelText('メールアドレス')).toBeInTheDocument()
-    expect(screen.getByLabelText('パスワード')).toBeInTheDocument()
-    expect(screen.getByText('ログイン')).toBeInTheDocument()
+    expect(screen.getByText('Twitchアカウントでログイン')).toBeInTheDocument()
+    expect(screen.getByText('Twitchでログイン')).toBeInTheDocument()
+    expect(screen.getByText('WeighCastを利用するには、Twitchアカウントでログインしてください。')).toBeInTheDocument()
   })
 
-  test('サインアップモードに切り替えができる', () => {
+  test('Twitchログインボタンをクリックすると認証が開始される', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ error: null })
+    
     render(<LoginPage />)
     
-    const toggleButton = screen.getByText('アカウントを作成')
-    fireEvent.click(toggleButton)
-    
-    expect(screen.getByText('新規アカウントを作成')).toBeInTheDocument()
-    expect(screen.getByText('登録')).toBeInTheDocument()
+    const loginButton = screen.getByText('Twitchでログイン')
+    fireEvent.click(loginButton)
+
+    await waitFor(() => {
+      expect(mockSignInWithOAuth).toHaveBeenCalledWith({
+        provider: 'twitch',
+        options: {
+          redirectTo: `${location.origin}/auth/callback`,
+        },
+      })
+    })
   })
 
-  test('フォーム入力ができる', () => {
+  test('ログイン中は処理中と表示される', async () => {
+    mockSignInWithOAuth.mockImplementation(() => new Promise(() => {}))
+    
     render(<LoginPage />)
     
-    const emailInput = screen.getByLabelText('メールアドレス')
-    const passwordInput = screen.getByLabelText('パスワード')
+    const loginButton = screen.getByText('Twitchでログイン')
+    fireEvent.click(loginButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('処理中...')).toBeInTheDocument()
+    })
+  })
+
+  test('ログインエラー時にエラーメッセージが表示される', async () => {
+    mockSignInWithOAuth.mockResolvedValue({ error: new Error('認証エラー') })
     
-    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
-    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    render(<LoginPage />)
     
-    expect(emailInput).toHaveValue('test@example.com')
-    expect(passwordInput).toHaveValue('password123')
+    const loginButton = screen.getByText('Twitchでログイン')
+    fireEvent.click(loginButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('ログインに失敗しました。もう一度お試しください。')).toBeInTheDocument()
+    })
   })
 })

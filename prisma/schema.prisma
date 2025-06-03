@@ -15,12 +15,16 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  weights   Weight[]
+  id               String   @id @default(cuid())
+  email            String?  @unique
+  name             String?
+  twitchId         String?  @unique
+  twitchUsername   String?
+  twitchDisplayName String?
+  twitchProfileImage String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  weights          Weight[]
 }
 
 model Weight {
