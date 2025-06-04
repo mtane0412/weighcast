@@ -12,7 +12,7 @@ jest.mock('@/lib/prisma')
 jest.mock('next/navigation')
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props: any) => {
+  default: (props: React.ComponentProps<'img'>) => {
     // eslint-disable-next-line @next/next/no-img-element
     return <img {...props} alt={props.alt} />
   },
@@ -36,7 +36,7 @@ describe('HomePage', () => {
           data: { user: null },
         }),
       },
-    } as any)
+    } as unknown as Awaited<ReturnType<typeof createClient>>)
 
     mockRedirect.mockImplementation(() => {
       throw new Error('Redirect called')
@@ -67,7 +67,7 @@ describe('HomePage', () => {
           data: { user: mockUser },
         }),
       },
-    } as any)
+    } as unknown as Awaited<ReturnType<typeof createClient>>)
 
     mockPrisma.user.findUnique.mockResolvedValueOnce(mockDbUser)
 
@@ -90,7 +90,7 @@ describe('HomePage', () => {
           data: { user: mockUser },
         }),
       },
-    } as any)
+    } as unknown as Awaited<ReturnType<typeof createClient>>)
 
     mockPrisma.user.findUnique.mockResolvedValueOnce(null)
 

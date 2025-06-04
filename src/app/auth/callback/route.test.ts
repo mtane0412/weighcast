@@ -5,7 +5,6 @@ import { GET } from './route'
 import { createClient } from '@/utils/supabase/server'
 import { getTwitchUser } from '@/lib/twitch'
 import { prisma } from '@/lib/prisma'
-import { NextResponse } from 'next/server'
 
 // モックの設定
 jest.mock('@/utils/supabase/server')
@@ -63,7 +62,7 @@ describe('GET /auth/callback', () => {
       },
     }
     
-    mockCreateClient.mockResolvedValue(mockSupabase as any)
+    mockCreateClient.mockResolvedValue(mockSupabase as unknown as Awaited<ReturnType<typeof createClient>>)
     
     // Twitch APIから最新の情報を返す
     mockGetTwitchUser.mockResolvedValue({
@@ -143,7 +142,7 @@ describe('GET /auth/callback', () => {
       },
     }
     
-    mockCreateClient.mockResolvedValue(mockSupabase as any)
+    mockCreateClient.mockResolvedValue(mockSupabase as unknown as Awaited<ReturnType<typeof createClient>>)
     
     // Twitch APIが失敗
     mockGetTwitchUser.mockResolvedValue(null)
