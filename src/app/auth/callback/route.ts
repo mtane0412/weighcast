@@ -31,37 +31,62 @@ export async function GET(request: Request) {
       })
       
       // Twitchプロバイダーからのログインの場合
-      if (authUser.app_metadata.provider === 'twitch') {
-        // Supabaseのuser_metadataから直接Twitch情報を取得
-        const twitchMetadata = authUser.user_metadata
-        
-        // identitiesからもTwitch情報を取得できる可能性がある
-        const twitchIdentity = authUser.identities?.find(id => id.provider === 'twitch')
-        
-        console.log('Auth callback - Twitch metadata:', twitchMetadata)
-        console.log('Auth callback - Twitch identity:', twitchIdentity)
-        
+      if (authUser.app_metadata.provider === 'twitch' && providerToken) {
         try {
-          // ユーザー情報をデータベースに保存または更新
-          const savedUser = await prisma.user.upsert({
-            where: { id: authUser.id },
-            update: {
-              email: authUser.email,
-              twitchId: twitchIdentity?.identity_data?.provider_id || twitchMetadata?.provider_id,
-              twitchUsername: twitchMetadata?.preferred_username || twitchMetadata?.name,
-              twitchDisplayName: twitchMetadata?.name || twitchMetadata?.full_name,
-              twitchProfileImage: twitchMetadata?.avatar_url || twitchMetadata?.picture,
-            },
-            create: {
-              id: authUser.id,
-              email: authUser.email,
-              twitchId: twitchIdentity?.identity_data?.provider_id || twitchMetadata?.provider_id,
-              twitchUsername: twitchMetadata?.preferred_username || twitchMetadata?.name,
-              twitchDisplayName: twitchMetadata?.name || twitchMetadata?.full_name,
-              twitchProfileImage: twitchMetadata?.avatar_url || twitchMetadata?.picture,
-            },
-          })
-          console.log('Auth callback - User saved successfully:', savedUser)
+          // provider_tokenを使ってTwitch APIから最新の情報を取得
+          const twitchUser = await getTwitchUser(providerToken)
+          
+          if (twitchUser) {
+            console.log('Auth callback - Fetched fresh Twitch user data:', twitchUser)
+            
+            // ユーザー情報をデータベースに保存または更新
+            const savedUser = await prisma.user.upsert({
+              where: { id: authUser.id },
+              update: {
+                email: authUser.email || twitchUser.email,
+                twitchId: twitchUser.id,
+                twitchUsername: twitchUser.login,
+                twitchDisplayName: twitchUser.display_name,
+                twitchProfileImage: twitchUser.profile_image_url,
+              },
+              create: {
+                id: authUser.id,
+                email: authUser.email || twitchUser.email,
+                twitchId: twitchUser.id,
+                twitchUsername: twitchUser.login,
+                twitchDisplayName: twitchUser.display_name,
+                twitchProfileImage: twitchUser.profile_image_url,
+              },
+            })
+            console.log('Auth callback - User saved successfully:', savedUser)
+          } else {
+            // Twitch APIから取得できない場合は、Supabaseのmetadataを使用
+            const twitchMetadata = authUser.user_metadata
+            const twitchIdentity = authUser.identities?.find(id => id.provider === 'twitch')
+            
+            console.log('Auth callback - Fallback to Supabase metadata:', twitchMetadata)
+            console.log('Auth callback - Twitch identity:', twitchIdentity)
+            
+            const savedUser = await prisma.user.upsert({
+              where: { id: authUser.id },
+              update: {
+                email: authUser.email,
+                twitchId: twitchIdentity?.identity_data?.provider_id || twitchMetadata?.provider_id,
+                twitchUsername: twitchMetadata?.login || twitchMetadata?.preferred_username || twitchMetadata?.name,
+                twitchDisplayName: twitchMetadata?.nickname || twitchMetadata?.display_name || twitchMetadata?.name || twitchMetadata?.full_name,
+                twitchProfileImage: twitchMetadata?.avatar_url || twitchMetadata?.picture,
+              },
+              create: {
+                id: authUser.id,
+                email: authUser.email,
+                twitchId: twitchIdentity?.identity_data?.provider_id || twitchMetadata?.provider_id,
+                twitchUsername: twitchMetadata?.login || twitchMetadata?.preferred_username || twitchMetadata?.name,
+                twitchDisplayName: twitchMetadata?.nickname || twitchMetadata?.display_name || twitchMetadata?.name || twitchMetadata?.full_name,
+                twitchProfileImage: twitchMetadata?.avatar_url || twitchMetadata?.picture,
+              },
+            })
+            console.log('Auth callback - User saved with fallback data:', savedUser)
+          }
         } catch (error) {
           console.error('Auth callback - Failed to save user to database:', error)
         }
