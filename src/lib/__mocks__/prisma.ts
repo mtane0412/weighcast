@@ -7,4 +7,8 @@ export const prisma = {
     upsert: jest.fn(),
     update: jest.fn(),
   },
+  weight: {
+    findFirst: jest.fn(),
+    create: jest.fn(),
+  },
 }
