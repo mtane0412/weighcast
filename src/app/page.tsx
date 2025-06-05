@@ -55,6 +55,22 @@ export default async function HomePage() {
         </div>
       </div>
       
+      <div className="mb-8">
+        {dbUser?.withingsUserId ? (
+          <div className="flex items-center gap-2 text-green-600">
+            <span>✓</span>
+            <span>Withings連携済み</span>
+          </div>
+        ) : (
+          <a
+            href="/api/withings/auth"
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Withingsと連携する
+          </a>
+        )}
+      </div>
+      
       <form action="/auth/signout" method="post">
         <button
           className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90"

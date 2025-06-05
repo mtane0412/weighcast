@@ -22,6 +22,10 @@ model User {
   twitchUsername   String?
   twitchDisplayName String?
   twitchProfileImage String?
+  withingsUserId   String?  @unique
+  withingsAccessToken String?
+  withingsRefreshToken String?
+  withingsTokenExpiresAt DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   weights          Weight[]
