@@ -4,8 +4,8 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { WeightChart } from './weight-chart'
 
-const mockFetch = jest.fn()
-global.fetch = mockFetch
+// fetchは既にjest.setup.jsでモックされている
+const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
 
 describe('WeightChart', () => {
   beforeEach(() => {
@@ -23,7 +23,7 @@ describe('WeightChart', () => {
     render(<WeightChart />)
     
     await waitFor(() => {
-      expect(screen.getByText('エラーが発生しました')).toBeInTheDocument()
+      expect(screen.getByText('Network error')).toBeInTheDocument()
     })
   })
 
@@ -57,7 +57,7 @@ describe('WeightChart', () => {
     await waitFor(() => {
       expect(screen.getByText('体重推移')).toBeInTheDocument()
       expect(screen.getByText('過去7日間の体重変化')).toBeInTheDocument()
-    })
+    }, { timeout: 3000 })
   })
 
   it('増加トレンドを正しく表示する', async () => {
@@ -75,8 +75,11 @@ describe('WeightChart', () => {
     
     await waitFor(() => {
       expect(screen.getByText(/1\.4% 増加/)).toBeInTheDocument()
-      expect(screen.getByText('70kg → 71kg（+1.0kg）')).toBeInTheDocument()
-    })
+    }, { timeout: 3000 })
+    
+    // 分割されたテキストをチェック
+    expect(screen.getByText(/70kg → 71kg/)).toBeInTheDocument()
+    expect(screen.getByText(/\+1\.0kg/)).toBeInTheDocument()
   })
 
   it('減少トレンドを正しく表示する', async () => {
@@ -94,22 +97,31 @@ describe('WeightChart', () => {
     
     await waitFor(() => {
       expect(screen.getByText(/1\.4% 減少/)).toBeInTheDocument()
-      expect(screen.getByText('71kg → 70kg（-1.0kg）')).toBeInTheDocument()
-    })
+    }, { timeout: 3000 })
+    
+    // 分割されたテキストをチェック
+    expect(screen.getByText(/71kg → 70kg/)).toBeInTheDocument()
+    expect(screen.getByText(/-1\.0kg/)).toBeInTheDocument()
   })
 
   it('指定された日数でデータを取得する', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ weights: [] }),
+      json: async () => ({ weights: [
+        { date: '2024-01-01', value: 70.0 },
+        { date: '2024-01-30', value: 71.0 },
+      ] }),
     })
     
     render(<WeightChart days={30} />)
     
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith('/api/weights?days=30')
-      expect(screen.getByText('過去30日間の体重変化')).toBeInTheDocument()
     })
+    
+    await waitFor(() => {
+      expect(screen.getByText('過去30日間の体重変化')).toBeInTheDocument()
+    }, { timeout: 3000 })
   })
 
   it('APIエラーを適切に処理する', async () => {

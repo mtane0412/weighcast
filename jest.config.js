@@ -12,6 +12,9 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  // テストログを簡略化
+  silent: true,
+  verbose: false,
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

@@ -4,9 +4,19 @@
 import { GET, POST } from './route'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { prisma } from '@/lib/prisma'
 
 jest.mock('@/utils/supabase/server', () => ({
   createClient: jest.fn(),
+}))
+
+jest.mock('@/lib/prisma', () => ({
+  prisma: {
+    weight: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+    },
+  },
 }))
 
 describe('GET /api/weights', () => {
@@ -14,17 +24,6 @@ describe('GET /api/weights', () => {
     auth: {
       getUser: jest.fn(),
     },
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          gte: jest.fn(() => ({
-            lte: jest.fn(() => ({
-              order: jest.fn(() => Promise.resolve({ data: [], error: null }))
-            }))
-          }))
-        }))
-      }))
-    }))
   }
 
   beforeEach(() => {
@@ -69,18 +68,7 @@ describe('GET /api/weights', () => {
       error: null,
     })
 
-    const mockFrom = jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          gte: jest.fn(() => ({
-            lte: jest.fn(() => ({
-              order: jest.fn(() => Promise.resolve({ data: [], error: null }))
-            }))
-          }))
-        }))
-      }))
-    }))
-    mockSupabase.from = mockFrom
+    ;(prisma.weight.findMany as jest.Mock).mockResolvedValue([])
 
     const request = new NextRequest('http://localhost:3000/api/weights')
     const response = await GET(request)
@@ -98,9 +86,9 @@ describe('GET /api/weights', () => {
     }
 
     const mockWeights = [
-      { date: '2024-01-01T00:00:00Z', value: '70.5' },
-      { date: '2024-01-02T00:00:00Z', value: '70.3' },
-      { date: '2024-01-03T00:00:00Z', value: '70.1' },
+      { date: new Date('2024-01-01T00:00:00Z'), value: '70.5' },
+      { date: new Date('2024-01-02T00:00:00Z'), value: '70.3' },
+      { date: new Date('2024-01-03T00:00:00Z'), value: '70.1' },
     ]
 
     mockSupabase.auth.getUser.mockResolvedValue({
@@ -108,18 +96,7 @@ describe('GET /api/weights', () => {
       error: null,
     })
 
-    const mockFrom = jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          gte: jest.fn(() => ({
-            lte: jest.fn(() => ({
-              order: jest.fn(() => Promise.resolve({ data: mockWeights, error: null }))
-            }))
-          }))
-        }))
-      }))
-    }))
-    mockSupabase.from = mockFrom
+    ;(prisma.weight.findMany as jest.Mock).mockResolvedValue(mockWeights)
 
     const request = new NextRequest('http://localhost:3000/api/weights')
     const response = await GET(request)
@@ -145,23 +122,16 @@ describe('GET /api/weights', () => {
       error: null,
     })
 
-    const mockFrom = jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          gte: jest.fn(() => ({
-            lte: jest.fn(() => ({
-              order: jest.fn(() => Promise.resolve({ data: [], error: null }))
-            }))
-          }))
-        }))
-      }))
-    }))
-    mockSupabase.from = mockFrom
+    ;(prisma.weight.findMany as jest.Mock).mockResolvedValue([])
 
     const request = new NextRequest('http://localhost:3000/api/weights?days=30')
     await GET(request)
 
-    expect(mockFrom).toHaveBeenCalledWith('weights')
+    expect(prisma.weight.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        userId: 'user-id',
+      }),
+    }))
   })
 
   it('エラーが発生した場合は500を返す', async () => {
@@ -174,18 +144,7 @@ describe('GET /api/weights', () => {
       error: null,
     })
 
-    const mockFrom = jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          gte: jest.fn(() => ({
-            lte: jest.fn(() => ({
-              order: jest.fn(() => Promise.resolve({ data: null, error: { message: 'Database error' } }))
-            }))
-          }))
-        }))
-      }))
-    }))
-    mockSupabase.from = mockFrom
+    ;(prisma.weight.findMany as jest.Mock).mockRejectedValue(new Error('Database error'))
 
     const request = new NextRequest('http://localhost:3000/api/weights')
     const response = await GET(request)
@@ -194,7 +153,7 @@ describe('GET /api/weights', () => {
     
     const responseText = await response.text()
     const data = JSON.parse(responseText)
-    expect(data).toEqual({ error: 'Failed to fetch weights' })
+    expect(data).toEqual({ error: 'Internal server error' })
   })
 })
 
@@ -203,13 +162,6 @@ describe('POST /api/weights', () => {
     auth: {
       getUser: jest.fn(),
     },
-    from: jest.fn(() => ({
-      insert: jest.fn(() => ({
-        select: jest.fn(() => ({
-          single: jest.fn(() => Promise.resolve({ data: null, error: null }))
-        }))
-      }))
-    }))
   }
 
   beforeEach(() => {
@@ -252,7 +204,7 @@ describe('POST /api/weights', () => {
     const mockWeight = {
       id: 'weight-id',
       value: '70.5',
-      date: '2024-01-01T00:00:00Z'
+      date: new Date('2024-01-01T00:00:00Z')
     }
 
     mockSupabase.auth.getUser.mockResolvedValue({
@@ -260,14 +212,7 @@ describe('POST /api/weights', () => {
       error: null,
     })
 
-    const mockFrom = jest.fn(() => ({
-      insert: jest.fn(() => ({
-        select: jest.fn(() => ({
-          single: jest.fn(() => Promise.resolve({ data: mockWeight, error: null }))
-        }))
-      }))
-    }))
-    mockSupabase.from = mockFrom
+    ;(prisma.weight.create as jest.Mock).mockResolvedValue(mockWeight)
 
     const request = new NextRequest('http://localhost:3000/api/weights', {
       method: 'POST',

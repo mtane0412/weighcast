@@ -37,6 +37,7 @@ export function WeightForm({ onWeightAdded }: WeightFormProps) {
       const weightValue = parseFloat(weight)
       if (isNaN(weightValue) || weightValue <= 0) {
         setError('有効な体重を入力してください')
+        setLoading(false)
         return
       }
 
