@@ -1,13 +1,9 @@
-/**
- * プルリクエスト時にlintとtestを実行するGitHub Actionsワークフロー
- */
+# プルリクエスト時にlintとtestを実行するGitHub Actionsワークフロー
 name: CI
 
 on:
   pull_request:
-    branches:
-      - main
-      - develop
+    # すべてのプルリクエストで実行
   push:
     branches:
       - main
