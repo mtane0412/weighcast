@@ -5,12 +5,19 @@ import { TextEncoder, TextDecoder } from 'util'
 global.Request = jest.fn().mockImplementation((url, options) => ({
   url,
   headers: new Map(),
+  nextUrl: {
+    searchParams: new URLSearchParams(new URL(url).search)
+  },
+  json: async () => options?.body ? JSON.parse(options.body) : {},
   ...options,
 }))
 
 global.Response = jest.fn().mockImplementation((body, options) => ({
   body,
   headers: new Map(),
+  status: options?.status || 200,
+  text: async () => body,
+  json: async () => JSON.parse(body),
   ...options,
 }))
 
@@ -31,3 +38,10 @@ Object.defineProperty(global, 'crypto', {
 
 // btoa のモック
 global.btoa = jest.fn().mockReturnValue('mock-base64-signature')
+
+// ResizeObserverのモック
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}))

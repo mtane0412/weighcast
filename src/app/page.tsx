@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Image from 'next/image'
+import { HomeDashboard } from '@/components/home-dashboard'
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -70,6 +71,8 @@ export default async function HomePage() {
           </a>
         )}
       </div>
+
+      <HomeDashboard />
       
       <form action="/auth/signout" method="post">
         <button
