@@ -4,8 +4,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { WeightForm } from './weight-form'
 
-const mockFetch = jest.fn()
-global.fetch = mockFetch
+// fetchは既にjest.setup.jsでモックされている
+const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
 
 describe('WeightForm', () => {
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe('WeightForm', () => {
   it('体重入力フォームを表示する', () => {
     render(<WeightForm />)
     
-    expect(screen.getByText('体重を記録')).toBeInTheDocument()
+    expect(screen.getAllByText('体重を記録')[0]).toBeInTheDocument()
     expect(screen.getByLabelText('体重 (kg)')).toBeInTheDocument()
     expect(screen.getByLabelText('日付')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '体重を記録' })).toBeInTheDocument()
@@ -62,10 +62,16 @@ describe('WeightForm', () => {
     render(<WeightForm />)
     
     const weightInput = screen.getByLabelText('体重 (kg)')
+    const dateInput = screen.getByLabelText('日付') 
     const submitButton = screen.getByRole('button', { name: '体重を記録' })
     
-    fireEvent.change(weightInput, { target: { value: '-1' } })
-    fireEvent.click(submitButton)
+    // 0以下の値を入力
+    fireEvent.change(weightInput, { target: { value: '0' } })
+    fireEvent.change(dateInput, { target: { value: '2024-01-01' } })
+    
+    // フォームを送信
+    const form = submitButton.closest('form')!
+    fireEvent.submit(form)
     
     await waitFor(() => {
       expect(screen.getByText('有効な体重を入力してください')).toBeInTheDocument()
