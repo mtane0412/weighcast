@@ -70,6 +70,27 @@ export async function GET(request: Request) {
       expiresAt: expiresAt.toISOString(),
     })
 
+    // 初回の体重データ同期を実行
+    try {
+      console.log('初回体重データ同期を開始')
+      const syncResponse = await fetch(new URL('/api/withings/sync-weights', request.url).toString(), {
+        method: 'POST',
+        headers: {
+          'Cookie': request.headers.get('cookie') || ''
+        }
+      })
+      
+      if (syncResponse.ok) {
+        const syncData = await syncResponse.json()
+        console.log('初回同期成功:', syncData)
+      } else {
+        console.error('初回同期失敗:', await syncResponse.text())
+      }
+    } catch (syncError) {
+      console.error('初回同期エラー:', syncError)
+      // 同期エラーがあっても連携自体は成功しているので続行
+    }
+
     // メインページにリダイレクト
     return NextResponse.redirect(new URL('/?withings_success=connected', request.url))
   } catch (error) {
