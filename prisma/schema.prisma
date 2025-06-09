@@ -59,7 +59,7 @@ model BodyComposition {
   fatFreeMass       Float?   // 除脂肪量 (kg) - type 5
   muscleMass        Float?   // 筋肉量 (kg) - type 76
   boneMass          Float?   // 骨量 (kg) - type 88
-  waterMass         Float?   // 水分量 (kg) - type 77
+  waterMass         Float?   // 水分量 (%) - type 77
   fatRatio          Float?   // 体脂肪率 (%) - type 6
   
   // 心血管系データ

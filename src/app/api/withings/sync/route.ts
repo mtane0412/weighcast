@@ -137,7 +137,7 @@ export async function POST() {
             case 76: // 筋肉量
               data.muscleMass = value
               break
-            case 77: // 水分量
+            case 77: // 水分量 (%)
               data.waterMass = value
               break
             case 88: // 骨量

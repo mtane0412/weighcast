@@ -141,8 +141,8 @@ export function WeightTable({ refreshTrigger }: WeightTableProps) {
               <TableHead className="text-right">体脂肪率 (%)</TableHead>
               <TableHead className="text-right">筋肉量 (kg)</TableHead>
               <TableHead className="text-right">脂肪量 (kg)</TableHead>
-              <TableHead className="text-right">水分量 (kg)</TableHead>
               <TableHead className="text-right">骨量 (kg)</TableHead>
+              <TableHead className="text-right">水分量 (%)</TableHead>
               <TableHead>データソース</TableHead>
             </TableRow>
           </TableHeader>
@@ -194,14 +194,14 @@ export function WeightTable({ refreshTrigger }: WeightTableProps) {
                       }
                     </TableCell>
                     <TableCell className="text-right">
-                      {entry.type === 'bodyComposition' && entry.waterMass !== null 
-                        ? formatValue(entry.waterMass, '', 1) 
+                      {entry.type === 'bodyComposition' && entry.boneMass !== null 
+                        ? formatValue(entry.boneMass, '', 1) 
                         : '-'
                       }
                     </TableCell>
                     <TableCell className="text-right">
-                      {entry.type === 'bodyComposition' && entry.boneMass !== null 
-                        ? formatValue(entry.boneMass, '', 1) 
+                      {entry.type === 'bodyComposition' && entry.waterMass !== null 
+                        ? formatValue(entry.waterMass, '', 1) 
                         : '-'
                       }
                     </TableCell>
