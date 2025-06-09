@@ -121,39 +121,6 @@ export function WeightTable({ refreshTrigger }: WeightTableProps) {
     }
   };
 
-  const renderBodyCompositionData = (entry: BodyCompositionEntry) => {
-    const metrics: string[] = [];
-    
-    if (entry.fatRatio !== null && entry.fatRatio !== undefined) {
-      metrics.push(`体脂肪率: ${formatValue(entry.fatRatio, '%')}`);
-    }
-    if (entry.muscleMass !== null && entry.muscleMass !== undefined) {
-      metrics.push(`筋肉量: ${formatValue(entry.muscleMass, 'kg')}`);
-    }
-    if (entry.fatMass !== null && entry.fatMass !== undefined) {
-      metrics.push(`脂肪量: ${formatValue(entry.fatMass, 'kg')}`);
-    }
-    if (entry.waterMass !== null && entry.waterMass !== undefined) {
-      metrics.push(`水分量: ${formatValue(entry.waterMass, 'kg')}`);
-    }
-    if (entry.boneMass !== null && entry.boneMass !== undefined) {
-      metrics.push(`骨量: ${formatValue(entry.boneMass, 'kg')}`);
-    }
-    if (entry.heartRate !== null && entry.heartRate !== undefined) {
-      metrics.push(`心拍数: ${formatValue(entry.heartRate, 'bpm', 0)}`);
-    }
-    if (entry.basalMetabolicRate !== null && entry.basalMetabolicRate !== undefined) {
-      metrics.push(`基礎代謝: ${formatValue(entry.basalMetabolicRate, 'kcal', 0)}`);
-    }
-    if (entry.visceralFat !== null && entry.visceralFat !== undefined) {
-      metrics.push(`内臓脂肪: ${formatValue(entry.visceralFat)}`);
-    }
-    if (entry.vascularAge !== null && entry.vascularAge !== undefined) {
-      metrics.push(`血管年齢: ${formatValue(entry.vascularAge, '歳', 0)}`);
-    }
-    
-    return metrics.length > 0 ? metrics.join(', ') : null;
-  };
 
   return (
     <Card>
@@ -171,20 +138,24 @@ export function WeightTable({ refreshTrigger }: WeightTableProps) {
                 記録日時 {sortOrder === "desc" ? "↓" : "↑"}
               </TableHead>
               <TableHead className="text-right">体重 (kg)</TableHead>
-              <TableHead>体組成データ</TableHead>
+              <TableHead className="text-right">体脂肪率 (%)</TableHead>
+              <TableHead className="text-right">筋肉量 (kg)</TableHead>
+              <TableHead className="text-right">脂肪量 (kg)</TableHead>
+              <TableHead className="text-right">水分量 (kg)</TableHead>
+              <TableHead className="text-right">骨量 (kg)</TableHead>
               <TableHead>データソース</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   読み込み中...
                 </TableCell>
               </TableRow>
             ) : sortedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   記録がありません
                 </TableCell>
               </TableRow>
@@ -192,9 +163,6 @@ export function WeightTable({ refreshTrigger }: WeightTableProps) {
               sortedData.map((entry, index) => {
                 const { date, time } = formatDateTime(entry.datetime);
                 const weight = getDisplayWeight(entry);
-                const bodyCompositionData = entry.type === 'bodyComposition' 
-                  ? renderBodyCompositionData(entry)
-                  : null;
                 
                 return (
                   <TableRow key={`${entry.datetime}-${index}`}>
@@ -207,14 +175,35 @@ export function WeightTable({ refreshTrigger }: WeightTableProps) {
                     <TableCell className="text-right font-medium">
                       {weight ? formatValue(weight, '', 1) : '-'}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {bodyCompositionData ? (
-                        <div className="max-w-xs">
-                          <span className="text-muted-foreground">{bodyCompositionData}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+                    <TableCell className="text-right">
+                      {entry.type === 'bodyComposition' && entry.fatRatio !== null 
+                        ? formatValue(entry.fatRatio, '', 1) 
+                        : '-'
+                      }
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {entry.type === 'bodyComposition' && entry.muscleMass !== null 
+                        ? formatValue(entry.muscleMass, '', 1) 
+                        : '-'
+                      }
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {entry.type === 'bodyComposition' && entry.fatMass !== null 
+                        ? formatValue(entry.fatMass, '', 1) 
+                        : '-'
+                      }
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {entry.type === 'bodyComposition' && entry.waterMass !== null 
+                        ? formatValue(entry.waterMass, '', 1) 
+                        : '-'
+                      }
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {entry.type === 'bodyComposition' && entry.boneMass !== null 
+                        ? formatValue(entry.boneMass, '', 1) 
+                        : '-'
+                      }
                     </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

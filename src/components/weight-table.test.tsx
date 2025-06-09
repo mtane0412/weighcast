@@ -67,6 +67,26 @@ describe("WeightTable", () => {
     });
   });
 
+  test("体組成データが個別の列に正しく表示される", async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: mockData }),
+    });
+
+    render(<WeightTable />);
+
+    await waitFor(() => {
+      // 体組成データが個別の列に表示されることを確認
+      expect(screen.getByText("21.4")).toBeInTheDocument(); // 体脂肪率
+      expect(screen.getByText("45.8")).toBeInTheDocument(); // 筋肉量  
+      expect(screen.getByText("15.2")).toBeInTheDocument(); // 脂肪量
+      
+      // nullの値は"-"で表示されることを確認
+      const cells = screen.getAllByText("-");
+      expect(cells.length).toBeGreaterThan(0);
+    });
+  });
+
   test("データがない場合は適切なメッセージを表示する", async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
