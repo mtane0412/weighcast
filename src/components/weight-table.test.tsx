@@ -58,10 +58,10 @@ describe("WeightTable", () => {
     // データが表示されるまで待機
     await waitFor(() => {
       expect(screen.getByText("2023/01/01")).toBeInTheDocument();
-      expect(screen.getByText("18:30")).toBeInTheDocument(); // UTCから日本時間に変換
+      expect(screen.getByText("18:30")).toBeInTheDocument();
       expect(screen.getByText("70.5")).toBeInTheDocument();
       expect(screen.getByText("2023/01/02")).toBeInTheDocument();
-      expect(screen.getByText("17:15")).toBeInTheDocument(); // UTCから日本時間に変換
+      expect(screen.getByText("17:15")).toBeInTheDocument();
       expect(screen.getByText("71.0")).toBeInTheDocument();
       expect(screen.getByText("手動入力")).toBeInTheDocument();
       expect(screen.getByText("Withings")).toBeInTheDocument();
@@ -186,9 +186,9 @@ describe("WeightTable", () => {
     await waitFor(() => {
       // 日付と時刻が分けて表示されることを確認
       expect(screen.getByText("2023/01/01")).toBeInTheDocument();
-      expect(screen.getByText("18:30")).toBeInTheDocument(); // UTCから日本時間に変換
+      expect(screen.getByText("18:30")).toBeInTheDocument();
       expect(screen.getByText("2023/01/02")).toBeInTheDocument();
-      expect(screen.getByText("17:15")).toBeInTheDocument(); // UTCから日本時間に変換
+      expect(screen.getByText("17:15")).toBeInTheDocument();
     });
   });
 
