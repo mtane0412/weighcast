@@ -30,6 +30,7 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   weights          Weight[]
+  bodyCompositions BodyComposition[]
 }
 
 model Weight {
@@ -41,6 +42,35 @@ model Weight {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+}
+
+model BodyComposition {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date              DateTime @default(now())
+  source            String   @default("withings") // "withings" or other sources
+  
+  // 体組成データ
+  weight            Float?   // 体重 (kg) - type 1
+  fatMass           Float?   // 脂肪量 (kg) - type 8
+  fatFreeMass       Float?   // 除脂肪量 (kg) - type 5
+  muscleMass        Float?   // 筋肉量 (kg) - type 76
+  boneMass          Float?   // 骨量 (kg) - type 88
+  waterMass         Float?   // 水分量 (kg) - type 77
+  fatRatio          Float?   // 体脂肪率 (%) - type 6
+  
+  // 心血管系データ
+  heartRate         Float?   // 心拍数 (bpm) - type 11
+  pulseWaveVelocity Float?   // 脈波伝播速度 - type 91
+  vascularAge       Float?   // 血管年齢 - type 155
+  visceralFat       Float?   // 内臓脂肪 - type 122
+  basalMetabolicRate Float?  // 基礎代謝率 - type 226
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@index([userId, date])
 }

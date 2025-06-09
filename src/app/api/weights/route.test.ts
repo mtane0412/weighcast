@@ -86,9 +86,9 @@ describe('GET /api/weights', () => {
     }
 
     const mockWeights = [
-      { date: new Date('2024-01-01T00:00:00Z'), value: '70.5' },
-      { date: new Date('2024-01-02T00:00:00Z'), value: '70.3' },
-      { date: new Date('2024-01-03T00:00:00Z'), value: '70.1' },
+      { date: new Date('2024-01-01T00:00:00Z'), value: '70.5', source: 'manual' },
+      { date: new Date('2024-01-02T00:00:00Z'), value: '70.3', source: 'manual' },
+      { date: new Date('2024-01-03T00:00:00Z'), value: '70.1', source: 'manual' },
     ]
 
     mockSupabase.auth.getUser.mockResolvedValue({
@@ -106,9 +106,9 @@ describe('GET /api/weights', () => {
     const responseText = await response.text()
     const data = JSON.parse(responseText)
     expect(data.weights).toEqual([
-      { date: '2024-01-01', value: 70.5 },
-      { date: '2024-01-02', value: 70.3 },
-      { date: '2024-01-03', value: 70.1 },
+      { date: '2024-01-01', datetime: '2024-01-01T00:00:00.000Z', value: 70.5, source: 'manual' },
+      { date: '2024-01-02', datetime: '2024-01-02T00:00:00.000Z', value: 70.3, source: 'manual' },
+      { date: '2024-01-03', datetime: '2024-01-03T00:00:00.000Z', value: 70.1, source: 'manual' },
     ])
   })
 
@@ -204,7 +204,8 @@ describe('POST /api/weights', () => {
     const mockWeight = {
       id: 'weight-id',
       value: '70.5',
-      date: new Date('2024-01-01T00:00:00Z')
+      date: new Date('2024-01-01T00:00:00Z'),
+      source: 'manual'
     }
 
     mockSupabase.auth.getUser.mockResolvedValue({
@@ -227,7 +228,8 @@ describe('POST /api/weights', () => {
     expect(data.weight).toEqual({
       id: 'weight-id',
       value: 70.5,
-      date: '2024-01-01'
+      date: '2024-01-01',
+      source: 'manual'
     })
   })
 

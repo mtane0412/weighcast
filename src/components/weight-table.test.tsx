@@ -8,17 +8,32 @@ import { WeightTable } from "./weight-table";
 // fetch のモック
 global.fetch = jest.fn();
 
-const mockWeights = [
+const mockData = [
   {
+    id: "1",
     date: "2023-01-01",
     datetime: "2023-01-01T09:30:00.000Z",
-    value: 70.5,
+    type: "weight" as const,
+    weight: 70.5,
     source: "manual",
   },
   {
+    id: "2",
     date: "2023-01-02",
     datetime: "2023-01-02T08:15:00.000Z",
-    value: 71.0,
+    type: "bodyComposition" as const,
+    weight: 71.0,
+    fatMass: 15.2,
+    fatFreeMass: null,
+    muscleMass: 45.8,
+    boneMass: null,
+    waterMass: null,
+    fatRatio: 21.4,
+    heartRate: 65,
+    pulseWaveVelocity: null,
+    vascularAge: null,
+    visceralFat: null,
+    basalMetabolicRate: null,
     source: "withings",
   },
 ];
@@ -31,7 +46,7 @@ describe("WeightTable", () => {
   test("体重データを正しく表示する", async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ weights: mockWeights }),
+      json: async () => ({ data: mockData }),
     });
 
     render(<WeightTable />);
@@ -55,7 +70,7 @@ describe("WeightTable", () => {
   test("データがない場合は適切なメッセージを表示する", async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ weights: [] }),
+      json: async () => ({ data: [] }),
     });
 
     render(<WeightTable />);
@@ -75,7 +90,7 @@ describe("WeightTable", () => {
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to fetch weights:",
+        "Failed to fetch data:",
         expect.any(Error)
       );
     });
@@ -87,17 +102,19 @@ describe("WeightTable", () => {
     (fetch as jest.Mock)
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ weights: mockWeights }),
+        json: async () => ({ data: mockData }),
       })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          weights: [
-            ...mockWeights,
+          data: [
+            ...mockData,
             {
+              id: "3",
               date: "2023-01-03",
               datetime: "2023-01-03T10:00:00.000Z",
-              value: 69.5,
+              type: "weight" as const,
+              weight: 69.5,
               source: "manual",
             },
           ],
@@ -121,7 +138,7 @@ describe("WeightTable", () => {
   test("データソースが正しく表示される", async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ weights: mockWeights }),
+      json: async () => ({ data: mockData }),
     });
 
     render(<WeightTable />);
@@ -140,7 +157,7 @@ describe("WeightTable", () => {
   test("日時が正しくフォーマットされて表示される", async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ weights: mockWeights }),
+      json: async () => ({ data: mockData }),
     });
 
     render(<WeightTable />);

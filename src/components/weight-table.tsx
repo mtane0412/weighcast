@@ -1,6 +1,6 @@
 /**
- * 体重記録データテーブルコンポーネント
- * 記録された体重データを表形式で表示する
+ * 体重・体組成記録データテーブルコンポーネント
+ * 記録された体重データと体組成データを表形式で表示する
  */
 
 "use client";
@@ -17,42 +17,66 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface WeightEntry {
+  id: string;
   date: string;
   datetime: string;
-  value: number;
+  type: 'weight';
+  weight: number;
   source: string;
 }
+
+interface BodyCompositionEntry {
+  id: string;
+  date: string;
+  datetime: string;
+  type: 'bodyComposition';
+  weight: number | null;
+  fatMass: number | null;
+  fatFreeMass: number | null;
+  muscleMass: number | null;
+  boneMass: number | null;
+  waterMass: number | null;
+  fatRatio: number | null;
+  heartRate: number | null;
+  pulseWaveVelocity: number | null;
+  vascularAge: number | null;
+  visceralFat: number | null;
+  basalMetabolicRate: number | null;
+  source: string;
+}
+
+type DataEntry = WeightEntry | BodyCompositionEntry;
 
 interface WeightTableProps {
   refreshTrigger?: number;
 }
 
 export function WeightTable({ refreshTrigger }: WeightTableProps) {
-  const [weights, setWeights] = useState<WeightEntry[]>([]);
+  const [data, setData] = useState<DataEntry[]>([]);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchWeights = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/weights?days=30");
+        const response = await fetch("/api/body-composition?days=30");
         if (response.ok) {
-          const data = await response.json();
-          setWeights(data.weights || []);
+          const responseData = await response.json();
+          setData(responseData.data || []);
         }
       } catch (error) {
-        console.error("Failed to fetch weights:", error);
+        console.error("Failed to fetch data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchWeights();
+    fetchData();
   }, [refreshTrigger]);
 
   // 日時でソート
-  const sortedWeights = [...weights].sort((a, b) => {
+  const sortedData = [...data].sort((a, b) => {
     const dateA = new Date(a.datetime);
     const dateB = new Date(b.datetime);
     return sortOrder === "desc" 
@@ -84,10 +108,57 @@ export function WeightTable({ refreshTrigger }: WeightTableProps) {
     return source === "withings" ? "Withings" : "手動入力";
   };
 
+  const formatValue = (value: number | null, unit: string = '', decimals: number = 1) => {
+    if (value === null) return '-';
+    return `${value.toFixed(decimals)}${unit}`;
+  };
+
+  const getDisplayWeight = (entry: DataEntry) => {
+    if (entry.type === 'weight') {
+      return entry.weight;
+    } else {
+      return entry.weight;
+    }
+  };
+
+  const renderBodyCompositionData = (entry: BodyCompositionEntry) => {
+    const metrics: string[] = [];
+    
+    if (entry.fatRatio !== null && entry.fatRatio !== undefined) {
+      metrics.push(`体脂肪率: ${formatValue(entry.fatRatio, '%')}`);
+    }
+    if (entry.muscleMass !== null && entry.muscleMass !== undefined) {
+      metrics.push(`筋肉量: ${formatValue(entry.muscleMass, 'kg')}`);
+    }
+    if (entry.fatMass !== null && entry.fatMass !== undefined) {
+      metrics.push(`脂肪量: ${formatValue(entry.fatMass, 'kg')}`);
+    }
+    if (entry.waterMass !== null && entry.waterMass !== undefined) {
+      metrics.push(`水分量: ${formatValue(entry.waterMass, 'kg')}`);
+    }
+    if (entry.boneMass !== null && entry.boneMass !== undefined) {
+      metrics.push(`骨量: ${formatValue(entry.boneMass, 'kg')}`);
+    }
+    if (entry.heartRate !== null && entry.heartRate !== undefined) {
+      metrics.push(`心拍数: ${formatValue(entry.heartRate, 'bpm', 0)}`);
+    }
+    if (entry.basalMetabolicRate !== null && entry.basalMetabolicRate !== undefined) {
+      metrics.push(`基礎代謝: ${formatValue(entry.basalMetabolicRate, 'kcal', 0)}`);
+    }
+    if (entry.visceralFat !== null && entry.visceralFat !== undefined) {
+      metrics.push(`内臓脂肪: ${formatValue(entry.visceralFat)}`);
+    }
+    if (entry.vascularAge !== null && entry.vascularAge !== undefined) {
+      metrics.push(`血管年齢: ${formatValue(entry.vascularAge, '歳', 0)}`);
+    }
+    
+    return metrics.length > 0 ? metrics.join(', ') : null;
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>体重記録一覧</CardTitle>
+        <CardTitle>健康データ記録一覧</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
@@ -100,25 +171,31 @@ export function WeightTable({ refreshTrigger }: WeightTableProps) {
                 記録日時 {sortOrder === "desc" ? "↓" : "↑"}
               </TableHead>
               <TableHead className="text-right">体重 (kg)</TableHead>
+              <TableHead>体組成データ</TableHead>
               <TableHead>データソース</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-muted-foreground">
+                <TableCell colSpan={4} className="text-center text-muted-foreground">
                   読み込み中...
                 </TableCell>
               </TableRow>
-            ) : sortedWeights.length === 0 ? (
+            ) : sortedData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-muted-foreground">
+                <TableCell colSpan={4} className="text-center text-muted-foreground">
                   記録がありません
                 </TableCell>
               </TableRow>
             ) : (
-              sortedWeights.map((entry, index) => {
+              sortedData.map((entry, index) => {
                 const { date, time } = formatDateTime(entry.datetime);
+                const weight = getDisplayWeight(entry);
+                const bodyCompositionData = entry.type === 'bodyComposition' 
+                  ? renderBodyCompositionData(entry)
+                  : null;
+                
                 return (
                   <TableRow key={`${entry.datetime}-${index}`}>
                     <TableCell>
@@ -128,7 +205,16 @@ export function WeightTable({ refreshTrigger }: WeightTableProps) {
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {entry.value.toFixed(1)}
+                      {weight ? formatValue(weight, '', 1) : '-'}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {bodyCompositionData ? (
+                        <div className="max-w-xs">
+                          <span className="text-muted-foreground">{bodyCompositionData}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

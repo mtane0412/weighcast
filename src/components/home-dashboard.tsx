@@ -7,7 +7,7 @@
 import { useState } from "react"
 import { WeightChart } from "./weight-chart"
 import { WeightForm } from "./weight-form"
-import { WithingsSyncButton } from "./withings-sync-button"
+import { WithingsUnifiedSyncButton } from "./withings-unified-sync-button"
 import { HeightSettings } from "./height-settings"
 import { WeightTable } from "./weight-table"
 
@@ -32,7 +32,7 @@ export function HomeDashboard() {
         </div>
         <div className="lg:col-span-1 space-y-4">
           <WeightForm onWeightAdded={handleWeightAdded} />
-          <WithingsSyncButton onSyncComplete={handleSyncComplete} />
+          <WithingsUnifiedSyncButton onSyncComplete={handleSyncComplete} />
           <HeightSettings />
         </div>
       </div>

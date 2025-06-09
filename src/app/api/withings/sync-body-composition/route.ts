@@ -1,12 +1,16 @@
 /**
- * Withingsからすべてのデータを同期するAPIエンドポイント
- * 体重データと体組成データを統合して処理する
+ * Withingsから体組成データを同期するAPIエンドポイント
  */
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import prisma from '@/lib/prisma'
 import { getBodyCompositionMeasures, refreshAccessToken } from '@/lib/withings'
+
+export async function GET() {
+  console.log('=== 体組成データ同期API GET テスト ===')
+  return NextResponse.json({ message: 'GET endpoint working' })
+}
 
 export async function POST() {
   try {
@@ -55,66 +59,42 @@ export async function POST() {
     }
 
     // 最後の同期から現在までのデータを取得
-    // 体重データと体組成データの両方から最新の日付を取得
-    const [lastWeight, lastBodyComposition] = await Promise.all([
-      prisma.weight.findFirst({
-        where: { userId: user.id, source: 'withings' },
-        orderBy: { date: 'desc' }
-      }),
-      prisma.bodyComposition.findFirst({
-        where: { userId: user.id },
-        orderBy: { date: 'desc' }
-      })
-    ])
+    const lastBodyComposition = await prisma.bodyComposition.findFirst({
+      where: { userId: user.id },
+      orderBy: { date: 'desc' }
+    })
 
-    const lastWeightDate = lastWeight?.date.getTime() || 0
-    const lastBodyCompositionDate = lastBodyComposition?.date.getTime() || 0
-    const lastSyncTime = Math.max(lastWeightDate, lastBodyCompositionDate)
-
-    const startdate = lastSyncTime 
-      ? Math.floor(lastSyncTime / 1000) + 1 // 最後の記録の次の秒から
+    const startdate = lastBodyComposition 
+      ? Math.floor(lastBodyComposition.date.getTime() / 1000) + 1 // 最後の記録の次の秒から
       : Math.floor(Date.now() / 1000) - (90 * 24 * 60 * 60) // なければ90日前から
 
     const enddate = Math.floor(Date.now() / 1000)
 
-    console.log('Withingsデータ取得範囲:', { 
+    console.log('体組成データ取得範囲:', { 
       startdate: new Date(startdate * 1000).toISOString(),
       enddate: new Date(enddate * 1000).toISOString()
     })
 
-    // Withings APIから体組成データを取得（体重も含む）
+    // Withings APIから体組成データを取得
     const measureResponse = await getBodyCompositionMeasures(accessToken, startdate, enddate)
 
     if (!measureResponse.body?.measuregrps) {
       return NextResponse.json({ 
-        message: '新しいデータはありません',
-        weightsSynced: 0,
-        bodyCompositionsSynced: 0
+        message: '新しい体組成データはありません',
+        syncedCount: 0
       })
     }
 
-    // データを体重のみと体組成データありに分類
-    const weightOnlyRecords: Array<{
-      userId: string;
-      value: number;
-      date: Date;
-      source: string;
-    }> = []
-
-    const bodyCompositionRecords: Array<Record<string, unknown>> = []
-
-    measureResponse.body.measuregrps.forEach(grp => {
-      const measureTypes = grp.measures.map(m => m.type)
-      const hasBodyComposition = measureTypes.some(type => [5, 6, 8, 76, 77, 88, 91, 122, 155, 226].includes(type))
-      
-      if (hasBodyComposition) {
-        // 体組成データありの場合はBodyCompositionテーブルに保存
+    // 体組成データを変換して保存
+    const bodyCompositionRecords = measureResponse.body.measuregrps
+      .map(grp => {
         const data: Record<string, unknown> = {
           userId: user.id,
           date: new Date(grp.date * 1000),
           source: 'withings',
         }
 
+        // 各測定データを対応するフィールドに変換
         grp.measures.forEach(measure => {
           const value = measure.value * Math.pow(10, measure.unit)
           
@@ -158,62 +138,35 @@ export async function POST() {
           }
         })
 
-        bodyCompositionRecords.push(data)
-      } else {
-        // 体重のみの場合はWeightテーブルに保存
-        const weightMeasure = grp.measures.find(m => m.type === 1)
-        if (weightMeasure) {
-          const weight = weightMeasure.value * Math.pow(10, weightMeasure.unit)
-          weightOnlyRecords.push({
-            userId: user.id,
-            value: weight,
-            date: new Date(grp.date * 1000),
-            source: 'withings',
-          })
-        }
-      }
+        return data
+      })
+      .filter(record => Object.keys(record).length > 4) // userId, date, source以外にデータがあるもの
+
+    if (bodyCompositionRecords.length === 0) {
+      return NextResponse.json({ 
+        message: '新しい体組成データはありません',
+        syncedCount: 0
+      })
+    }
+
+    // バッチで挿入（重複は無視）
+    const result = await prisma.bodyComposition.createMany({
+      data: bodyCompositionRecords,
+      skipDuplicates: true
     })
 
-    let weightsSynced = 0
-    let bodyCompositionsSynced = 0
-
-    // 体重のみのデータを保存
-    if (weightOnlyRecords.length > 0) {
-      const weightResult = await prisma.weight.createMany({
-        data: weightOnlyRecords,
-        skipDuplicates: true
-      })
-      weightsSynced = weightResult.count
-    }
-
-    // 体組成データを保存
-    if (bodyCompositionRecords.length > 0) {
-      const bodyCompositionResult = await prisma.bodyComposition.createMany({
-        data: bodyCompositionRecords,
-        skipDuplicates: true
-      })
-      bodyCompositionsSynced = bodyCompositionResult.count
-    }
-
-    console.log(`${weightsSynced}件の体重データ、${bodyCompositionsSynced}件の体組成データを保存しました`)
-
-    const totalSynced = weightsSynced + bodyCompositionsSynced
-    const message = totalSynced > 0 
-      ? `${totalSynced}件のデータを同期しました（体重: ${weightsSynced}件、体組成: ${bodyCompositionsSynced}件）`
-      : '新しいデータはありません'
+    console.log(`${result.count}件の体組成データを保存しました`)
 
     return NextResponse.json({
-      message,
-      weightsSynced,
-      bodyCompositionsSynced,
-      totalSynced,
+      message: `${result.count}件の体組成データを同期しました`,
+      syncedCount: result.count,
       lastSyncDate: new Date().toISOString()
     })
 
   } catch (error) {
-    console.error('Withingsデータ同期エラー:', error)
+    console.error('体組成データ同期エラー:', error)
     return NextResponse.json(
-      { error: 'データの同期中にエラーが発生しました' },
+      { error: '体組成データの同期中にエラーが発生しました' },
       { status: 500 }
     )
   }
