@@ -91,6 +91,7 @@ export async function POST() {
           userId: user.id,
           value: weight,
           date: new Date(grp.date * 1000),
+          source: 'withings',
         }
       })
 

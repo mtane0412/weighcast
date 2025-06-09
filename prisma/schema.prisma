@@ -36,6 +36,7 @@ model Weight {
   id        String   @id @default(cuid())
   value     Float
   date      DateTime @default(now())
+  source    String   @default("manual") // "manual" or "withings"
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())

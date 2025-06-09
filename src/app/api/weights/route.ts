@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
 
     const formattedWeights = weights.map(weight => ({
       date: weight.date.toISOString().split('T')[0],
-      value: Number(weight.value)
+      datetime: weight.date.toISOString(),
+      value: Number(weight.value),
+      source: weight.source
     }))
 
     return NextResponse.json({ weights: formattedWeights })
@@ -79,7 +81,8 @@ export async function POST(request: NextRequest) {
       weight: {
         id: weight.id,
         value: Number(weight.value),
-        date: weight.date.toISOString().split('T')[0]
+        date: weight.date.toISOString().split('T')[0],
+        source: weight.source
       }
     }, { status: 201 })
   } catch (error) {
