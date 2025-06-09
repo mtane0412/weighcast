@@ -26,6 +26,7 @@ import {
 interface WeightData {
   date: string
   value: number
+  bmi?: number
 }
 
 interface WeightChartProps {
@@ -38,22 +39,47 @@ const chartConfig = {
     label: "体重",
     color: "hsl(var(--chart-1))",
   },
+  bmi: {
+    label: "BMI",
+    color: "hsl(var(--chart-2))",
+  },
 } satisfies ChartConfig
 
 export function WeightChart({ days = 7, refreshTrigger = 0 }: WeightChartProps) {
   const [weights, setWeights] = useState<WeightData[]>([])
+  const [height, setHeight] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchWeights = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/api/weights?days=${days}`)
-        if (!response.ok) {
-          throw new Error('データの取得に失敗しました')
+        // 体重データと身長を並行して取得
+        const [weightsResponse, heightResponse] = await Promise.all([
+          fetch(`/api/weights?days=${days}`),
+          fetch('/api/user/height')
+        ])
+
+        if (!weightsResponse.ok) {
+          throw new Error('体重データの取得に失敗しました')
         }
-        const data = await response.json()
-        setWeights(data.weights)
+
+        const weightsData = await weightsResponse.json()
+        let userHeight: number | null = null
+
+        if (heightResponse.ok) {
+          const heightData = await heightResponse.json()
+          userHeight = heightData.height
+          setHeight(userHeight)
+        }
+
+        // BMIを計算して追加
+        const weightsWithBmi = weightsData.weights.map((weight: WeightData) => ({
+          ...weight,
+          bmi: userHeight ? Number((weight.value / ((userHeight / 100) ** 2)).toFixed(1)) : undefined
+        }))
+
+        setWeights(weightsWithBmi)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'エラーが発生しました')
       } finally {
@@ -61,7 +87,7 @@ export function WeightChart({ days = 7, refreshTrigger = 0 }: WeightChartProps) 
       }
     }
 
-    fetchWeights()
+    fetchData()
   }, [days, refreshTrigger])
 
   const calculateTrend = () => {
@@ -144,18 +170,33 @@ export function WeightChart({ days = 7, refreshTrigger = 0 }: WeightChartProps) 
               tickFormatter={formatDate}
             />
             <YAxis
+              yAxisId="weight"
               domain={yAxisDomain}
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               tickFormatter={(value) => `${value}kg`}
             />
+            {height && (
+              <YAxis
+                yAxisId="bmi"
+                orientation="right"
+                domain={[15, 35]}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(value) => `${value}`}
+              />
+            )}
             <ChartTooltip
               cursor={false}
               content={
                 <ChartTooltipContent
-                  hideLabel
-                  formatter={(value) => `${value}kg`}
+                  formatter={(value, name) => {
+                    if (name === "value") return `${value}kg`
+                    if (name === "bmi") return `BMI: ${value}`
+                    return value
+                  }}
                 />
               }
             />
@@ -171,7 +212,25 @@ export function WeightChart({ days = 7, refreshTrigger = 0 }: WeightChartProps) 
               activeDot={{
                 r: 6,
               }}
+              yAxisId="weight"
             />
+            {height && (
+              <Line
+                dataKey="bmi"
+                type="monotone"
+                stroke="var(--color-bmi)"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                dot={{
+                  fill: "var(--color-bmi)",
+                  r: 4,
+                }}
+                activeDot={{
+                  r: 6,
+                }}
+                yAxisId="bmi"
+              />
+            )}
           </LineChart>
         </ChartContainer>
       </CardContent>
@@ -194,6 +253,15 @@ export function WeightChart({ days = 7, refreshTrigger = 0 }: WeightChartProps) 
             {weights[0].value}kg → {weights[weights.length - 1].value}kg
             （{trend.difference > 0 ? '+' : ''}{trend.difference.toFixed(1)}kg）
           </div>
+          {height && weights[weights.length - 1].bmi && (
+            <div className="text-muted-foreground leading-none">
+              現在のBMI: {weights[weights.length - 1].bmi}
+              {weights[weights.length - 1].bmi! < 18.5 && " (低体重)"}
+              {weights[weights.length - 1].bmi! >= 18.5 && weights[weights.length - 1].bmi! < 25 && " (標準)"}
+              {weights[weights.length - 1].bmi! >= 25 && weights[weights.length - 1].bmi! < 30 && " (過体重)"}
+              {weights[weights.length - 1].bmi! >= 30 && " (肥満)"}
+            </div>
+          )}
         </CardFooter>
       )}
     </Card>

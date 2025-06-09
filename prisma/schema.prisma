@@ -26,6 +26,7 @@ model User {
   withingsAccessToken String?
   withingsRefreshToken String?
   withingsTokenExpiresAt DateTime?
+  height           Float?   // 身長（cm）
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   weights          Weight[]

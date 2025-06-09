@@ -48,3 +48,30 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
 
 // fetchのモック
 global.fetch = jest.fn()
+
+// NextResponseのモック
+jest.mock('next/server', () => ({
+  NextResponse: {
+    json: (data, init) => {
+      const response = new Response(JSON.stringify(data), init)
+      response.json = async () => data
+      return response
+    },
+    redirect: (url) => {
+      const response = new Response(null, {
+        status: 302,
+        headers: { Location: url.toString() }
+      })
+      return response
+    }
+  },
+  NextRequest: jest.fn().mockImplementation((url, options) => ({
+    url,
+    headers: new Map(),
+    nextUrl: {
+      searchParams: new URLSearchParams(new URL(url).search)
+    },
+    json: async () => options?.body ? JSON.parse(options.body) : {},
+    ...options,
+  }))
+}))
