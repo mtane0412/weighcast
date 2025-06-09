@@ -3,6 +3,7 @@
  */
 
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { WeightTable } from "./weight-table";
 
 // fetch のモック
@@ -24,16 +25,16 @@ const mockData = [
     type: "bodyComposition" as const,
     weight: 71.0,
     fatMass: 15.2,
-    fatFreeMass: null,
+    fatFreeMass: 55.0,
     muscleMass: 45.8,
-    boneMass: null,
-    waterMass: null,
+    boneMass: 2.8,
+    waterMass: 60.5,
     fatRatio: 21.4,
-    heartRate: 65,
-    pulseWaveVelocity: null,
-    vascularAge: null,
-    visceralFat: null,
-    basalMetabolicRate: null,
+    heartRate: 75,
+    pulseWaveVelocity: 8.5,
+    vascularAge: 30,
+    visceralFat: 5,
+    basalMetabolicRate: 1800,
     source: "withings",
   },
 ];
@@ -189,5 +190,69 @@ describe("WeightTable", () => {
       expect(screen.getByText("2023/01/02")).toBeInTheDocument();
       expect(screen.getByText("17:15")).toBeInTheDocument(); // UTCから日本時間に変換
     });
+  });
+
+  test("設定ボタンが表示される", async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: mockData }),
+    });
+
+    render(<WeightTable />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /列設定/i })).toBeInTheDocument();
+    });
+  });
+
+  test("列設定モーダルが開ける", async () => {
+    const user = userEvent.setup();
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: mockData }),
+    });
+
+    render(<WeightTable />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /列設定/i })).toBeInTheDocument();
+    });
+
+    const settingsButton = screen.getByRole("button", { name: /列設定/i });
+    await user.click(settingsButton);
+
+    expect(screen.getByText("表示列設定")).toBeInTheDocument();
+  });
+
+  test("隠れた列は表示されない", async () => {
+    const user = userEvent.setup();
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: mockData }),
+    });
+
+    render(<WeightTable />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /列設定/i })).toBeInTheDocument();
+    });
+
+    // 初期状態では隠れている列のヘッダーが表示されていないことを確認
+    expect(screen.queryByText("除脂肪量 (kg)")).not.toBeInTheDocument();
+    expect(screen.queryByText("心拍数 (bpm)")).not.toBeInTheDocument();
+
+    // 設定モーダルを開いて列を表示状態にする
+    const settingsButton = screen.getByRole("button", { name: /列設定/i });
+    await user.click(settingsButton);
+
+    const fatFreeMassCheckbox = screen.getByLabelText("除脂肪量 (kg)");
+    await user.click(fatFreeMassCheckbox);
+
+    const applyButton = screen.getByRole("button", { name: "適用" });
+    await user.click(applyButton);
+
+    // 列が表示されることを確認
+    expect(screen.getByText("除脂肪量 (kg)")).toBeInTheDocument();
+    expect(screen.getByText("55.0")).toBeInTheDocument();
   });
 });
