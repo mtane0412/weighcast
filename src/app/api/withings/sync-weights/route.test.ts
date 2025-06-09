@@ -229,7 +229,8 @@ describe('POST /api/withings/sync-weights', () => {
         {
           userId: 'user123',
           value: 65.5,
-          date: new Date(measureDate * 1000)
+          date: new Date(measureDate * 1000),
+          source: 'withings'
         }
       ],
       skipDuplicates: true

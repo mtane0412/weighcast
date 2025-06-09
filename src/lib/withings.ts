@@ -396,3 +396,84 @@ export async function getWeightMeasures(accessToken: string, startdate?: number,
 
   return data
 }
+
+/**
+ * 体組成データ取得（Measure API）- 複数の測定タイプに対応
+ */
+export async function getBodyCompositionMeasures(accessToken: string, startdate?: number, enddate?: number): Promise<WithingsMeasureResponse> {
+  const clientId = process.env.WITHINGS_CLIENT_ID
+  const clientSecret = process.env.WITHINGS_CLIENT_SECRET
+
+  if (!clientId || !clientSecret) {
+    throw new Error('Withings認証に必要な環境変数が設定されていません')
+  }
+
+  // Nonce取得
+  const nonce = await getNonce(clientId, clientSecret)
+  
+  // 体組成関連の測定タイプ
+  // 1: 体重, 5: 除脂肪量, 6: 体脂肪率, 8: 脂肪量, 11: 心拍数, 76: 筋肉量, 77: 水分量, 88: 骨量, 91: 脈波伝播速度, 122: 内臓脂肪, 155: 血管年齢, 226: 基礎代謝率
+  const measureTypes = '1,5,6,8,11,76,77,88,91,122,155,226'
+  
+  // 本体パラメータ
+  const params: Record<string, string> = {
+    action: 'getmeas',
+    client_id: clientId,
+    meastypes: measureTypes,
+    category: '1',    // 実測値
+    nonce,
+    ...(startdate && { startdate: startdate.toString() }),
+    ...(enddate && { enddate: enddate.toString() }),
+  }
+
+  // 署名対象パラメータ
+  const sigParams = {
+    action: params.action,
+    client_id: params.client_id,
+    nonce: params.nonce,
+  }
+  
+  // 署名を生成
+  const signature = await generateSignatureFromParams(sigParams, clientSecret)
+  
+  const requestBody = new URLSearchParams({
+    ...params,
+    signature
+  })
+
+  console.log('Withings体組成データ取得リクエスト:', {
+    url: 'https://wbsapi.withings.net/v2/measure',
+    method: 'POST',
+    params: Object.fromEntries(requestBody)
+  })
+
+  const response = await fetch('https://wbsapi.withings.net/v2/measure', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: requestBody
+  })
+
+  console.log('Withings体組成データ取得レスポンス:', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Withings体組成データ取得エラー詳細:', errorText)
+    throw new Error(`Withings API 通信失敗: ${response.statusText} - ${response.status}`)
+  }
+
+  const data = await response.json()
+  console.log('Withings体組成データ取得レスポンスデータ:', data)
+  
+  if (data.status !== 0) {
+    throw new Error(`Withings API エラー: ${data.error || 'Unknown error'}`)
+  }
+
+  return data
+}
